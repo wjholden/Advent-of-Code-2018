@@ -12,7 +12,7 @@
 6. `##`
 7. `**` Queues, ordering, dependencies, parallelism
 8. `##`
-9. `  `
+9. `**` Double-ended queues
 10. `##`
 11. `##`
 12. `##`
@@ -33,6 +33,8 @@
 # Lessons learned
 
 - https://www.reddit.com/r/adventofcode/comments/1qhewn6/rotating_between_eight_directions/
+- https://www.reddit.com/r/adventofcode/comments/a4i97s/comment/ebepyc7/ `VecDeque` can rotate!
+  This is *much* faster than insertions.
 
 # Libraries
 
