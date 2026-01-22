@@ -32,6 +32,8 @@
 
 # Lessons learned
 
+- https://www.reddit.com/r/adventofcode/comments/1qhewn6/rotating_between_eight_directions/
+
 # Libraries
 
 # References

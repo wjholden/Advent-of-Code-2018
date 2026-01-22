@@ -126,7 +126,7 @@ impl Task {
 }
 
 #[cfg(test)]
-mod puzzle_name {
+mod the_sum_of_its_parts {
     use super::*;
 
     const SAMPLE: &str = include_str!("../../samples/day07.txt");
