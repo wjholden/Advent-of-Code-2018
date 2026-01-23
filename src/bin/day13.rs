@@ -1,25 +1,23 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Display,
-};
+use std::{collections::HashMap, fmt::Display};
 
 use advent_of_code_2018::Solver;
 use num_complex::Complex;
 
 const PUZZLE: &str = include_str!("../../puzzles/day13.txt");
-// const SPECIAL_CART: Complex<isize> = Complex::new(117, 95);
 
+/// Man, I really thought this one was going to take some crazy modulo
+/// arithmetic. Turns out you have to read the instructions carefully.
+/// No tricks, just a tricky procedural puzzle.
 fn main() {
-    let mut solver = Puzzle::new(PUZZLE);
-    let first_collisions = solver.part1();
-    solver
-        .carts
-        .retain(|cart| !first_collisions.contains(&cart.position));
+    let first_collisions = Puzzle::new(PUZZLE).part1();
     println!(
         "Part 1: {},{}",
         first_collisions[0].re, first_collisions[0].im
     );
-    println!("Part 2: {}", solver.part2());
+    let mut puzzle = Puzzle::new(PUZZLE);
+    let last_cart = puzzle.part2();
+    println!("Part 2: {},{}", last_cart.re, last_cart.im);
+    println!("{puzzle}");
 }
 
 enum Track {
@@ -30,15 +28,20 @@ enum Track {
     Intersection,
 }
 
-impl ToString for Track {
-    fn to_string(&self) -> String {
-        String::from(match self {
-            Track::Vertical => "|",
-            Track::Horizontal => "-",
-            Track::TurnSW => "\\",
-            Track::TurnSE => "/",
-            Track::Intersection => "+",
-        })
+impl Display for Track {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Track::Vertical => "|",
+                Track::Horizontal => "-",
+                Track::TurnSW => "\\",
+                Track::TurnSE => "/",
+                Track::Intersection => "+",
+            }
+        )?;
+        Ok(())
     }
 }
 
@@ -54,73 +57,18 @@ struct Cart {
     position: Complex<isize>,
     velocity: Complex<isize>,
     next_decision: Decision,
-    ticks: usize,
-    initial_position: Complex<isize>,
-    initial_velocity: Complex<isize>,
-    period: Option<usize>,
-    // output_file: Option<File>,
-    // old_path: HashMap<Complex<isize>, HashSet<(Complex<isize>, usize)>>,
-    path: Vec<Complex<isize>>,
 }
 
 impl Cart {
     fn new(position: Complex<isize>, velocity: Complex<isize>) -> Self {
-        // let output_file = if position == SPECIAL_CART {
-        //     let mut of = File::create("special_cart_path.csv").expect("create special cart csv");
-        //     writeln!(of, "x,y,ticks,direction").unwrap();
-        //     Some(of)
-        // } else {
-        //     None
-        // };
         Self {
             position,
             velocity,
             next_decision: Decision::Left,
-            ticks: 0,
-            initial_position: position,
-            initial_velocity: velocity,
-            period: None,
-            // output_file,
-            // old_path: HashMap::new(),
-            path: Vec::new(),
         }
     }
 
     fn tick(&mut self, tracks: &HashMap<Complex<isize>, Track>) {
-        // if self.initial_position == SPECIAL_CART && self.period.is_none() {
-        //     println!("{},{}", self.position.re, self.position.im);
-        // }
-
-        // if let Some(ref mut of) = self.output_file
-        //     && self.period.is_none()
-        // {
-        //     let dir = match (self.velocity.re, self.velocity.im) {
-        //         (0, 1) => "v",
-        //         (0, -1) => "^",
-        //         (-1, 0) => "<",
-        //         (1, 0) => ">",
-        //         _ => unreachable!(),
-        //     };
-        //     writeln!(
-        //         of,
-        //         "{},{},{},\"{}\"",
-        //         self.position.re, self.position.im, self.ticks, dir
-        //     )
-        //     .unwrap();
-        // }
-
-        // if self.period.is_none() {
-        //     self.old_path
-        //         .entry(self.position)
-        //         .or_default()
-        //         .insert((self.velocity, self.ticks));
-        // }
-
-        if self.period.is_none() {
-            self.path.push(self.position);
-        }
-
-        self.ticks += 1;
         self.position += self.velocity;
         match tracks.get(&self.position) {
             None => {
@@ -159,14 +107,6 @@ impl Cart {
                 }
             }
         }
-
-        if self.period.is_none()
-            && self.position == self.initial_position
-            && self.velocity == self.initial_velocity
-            && matches!(self.next_decision, Decision::Left)
-        {
-            self.period = Some(self.ticks);
-        }
     }
 }
 
@@ -195,7 +135,7 @@ impl Display for Puzzle {
                     }
                 }
                 match self.tracks.get(&p) {
-                    Some(s) => write!(f, "{}", s.to_string())?,
+                    Some(s) => write!(f, "{s}")?,
                     None => write!(f, " ")?,
                 }
             }
@@ -253,14 +193,11 @@ impl Solver<Vec<Complex<isize>>, Complex<isize>> for Puzzle {
     }
 
     fn part1(&mut self) -> Vec<Complex<isize>> {
-        let mut positions = HashSet::new();
-        let mut period_discovered = false;
+        let mut crash_sites = vec![];
 
         loop {
-            positions.clear();
-            let mut crash_site: Option<Vec<Complex<isize>>> = None;
-
-            // Does order matter?
+            // Does order matter? Yes. (Read the instructions!)
+            // Thank you https://www.reddit.com/r/adventofcode/comments/a8f32j/comment/ecarp8g/.
             self.carts.sort_by(|c1, c2| {
                 let x1 = c1.position.re;
                 let x2 = c2.position.re;
@@ -269,73 +206,21 @@ impl Solver<Vec<Complex<isize>>, Complex<isize>> for Puzzle {
                 (y1, x1).cmp(&(y2, x2))
             });
 
-            // for i in 0..self.carts.len() {
-            //     let cart = &mut self.carts[i];
-            //     cart.tick(&self.tracks);
-            //     let cart = &self.carts[i];
-            //     for j in i + 1..self.carts.len() {
-            //         if cart.position == self.carts[j].position {
-            //             if !positions.insert(cart.position) {
-            //                 if let Some(ref mut crashes) = crash_site {
-            //                     println!("multiple crashes in the same tick!");
-            //                     crashes.push(cart.position);
-            //                 } else {
-            //                     crash_site = Some(vec![cart.position]);
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
-
-            for cart in self.carts.iter_mut() {
-                cart.tick(&self.tracks);
-
-                if !positions.insert(cart.position) {
-                    if let Some(ref mut crashes) = crash_site {
-                        println!("multiple crashes in the same tick!");
-                        crashes.push(cart.position);
-                    } else {
-                        crash_site = Some(vec![cart.position]);
+            for i in 0..self.carts.len() {
+                // Don't move a crashed cart.
+                if crash_sites.contains(&self.carts[i].position) {
+                    continue;
+                }
+                self.carts[i].tick(&self.tracks);
+                for j in 0..self.carts.len() {
+                    if i != j && self.carts[i].position == self.carts[j].position {
+                        crash_sites.push(self.carts[i].position);
                     }
                 }
             }
 
-            if let Some(crash_site) = crash_site {
-                return crash_site;
-            }
-            if !period_discovered
-                && self.carts.len() == 3
-                && self.carts.iter().all(|cart| cart.period.is_some())
-            {
-                period_discovered = true;
-                // dbg!(&self.carts);
-
-                // for cart in &self.carts[0..=2] {
-                //     cart.old_path
-                //         .iter()
-                //         .filter(|(_, velocities)| {
-                //             let s: HashSet<Complex<isize>> =
-                //                 HashSet::from_iter(velocities.iter().map(|(v, _)| *v));
-                //             s.len() == 4
-                //         })
-                //         .for_each(|(position, velocities)| {
-                //             println!("{position:?} at {velocities:?}")
-                //         });
-                // }
-
-                // let s1: HashSet<Complex<isize>> = self.carts[0].old_path.keys().cloned().collect();
-                // let s3: HashSet<Complex<isize>> = self.carts[2].old_path.keys().cloned().collect();
-                // println!("{:?}", s1.intersection(&s3).count());
-
-                // We now know the full path length of each of the three remaining carts.
-                // The first and second are on exactly the same path and
-                // apparently never collide. I'm thinking the collision happens
-                // with the third cart. So, we're going to step through each point
-                // where the carts could possibly intersect and figure out how
-                // many steps it would take to get there.
-                for (i, cart) in self.carts.iter().enumerate() {
-                    println!("Cart #{} period is {}.", i, cart.period.unwrap());
-                }
+            if !crash_sites.is_empty() {
+                return crash_sites;
             }
         }
     }
@@ -345,9 +230,9 @@ impl Solver<Vec<Complex<isize>>, Complex<isize>> for Puzzle {
             let crash_site = self.part1();
             self.carts
                 .retain(|cart| !crash_site.contains(&cart.position));
-            // println!("crash at {crash_site:?}, {} carts left", self.carts.len());
         }
-        return self.carts[0].position;
+        assert_eq!(self.carts.len(), 1);
+        self.carts[0].position
     }
 }
 
@@ -370,6 +255,8 @@ mod mine_cart_madness {
     }
 
     #[test]
+    /// Really needed this extra test case! Thank you!
+    /// https://www.reddit.com/r/adventofcode/comments/a8f32j/comment/ecdqxrx/
     fn extra() {
         assert_eq!(Puzzle::new(SAMPLE3).part1(), vec![Complex::new(0, 1)])
     }
