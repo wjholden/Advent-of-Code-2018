@@ -1,7 +1,5 @@
 use std::collections::BTreeMap;
 
-use advent_of_code_2018::Solver;
-
 const PUZZLE: &str = include_str!("../../puzzles/day07.txt");
 
 fn main() {
@@ -14,7 +12,7 @@ struct Puzzle {
     dependent: BTreeMap<char, Vec<char>>,
 }
 
-impl Solver<String, usize> for Puzzle {
+impl Puzzle {
     fn new(input: &str) -> Self {
         let mut dependent: BTreeMap<char, Vec<char>> = BTreeMap::new();
         for line in input.lines() {

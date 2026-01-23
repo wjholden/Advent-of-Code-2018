@@ -1,7 +1,5 @@
 use std::collections::VecDeque;
 
-use advent_of_code_2018::Solver;
-
 const PUZZLE: &str = include_str!("../../puzzles/day09.txt");
 
 fn main() {
@@ -15,7 +13,7 @@ struct Puzzle {
     last_marble: usize,
 }
 
-impl Solver<usize, usize> for Puzzle {
+impl Puzzle {
     fn new(input: &str) -> Self {
         let mut it = input.split_ascii_whitespace();
         Self {
@@ -60,11 +58,6 @@ impl Solver<usize, usize> for Puzzle {
 #[cfg(test)]
 mod marble_mania {
     use super::*;
-
-    #[test]
-    fn wrapping_subtract() {
-        assert_eq!(modular_subtraction(3, 7, 10), 6);
-    }
 
     #[test]
     fn test9_25() {

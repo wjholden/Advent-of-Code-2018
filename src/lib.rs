@@ -1,7 +1,7 @@
 pub trait Solver<T, U> {
     fn new(input: &str) -> Self;
-    fn part1(&self) -> T;
-    fn part2(&self) -> U;
+    fn part1(&mut self) -> T;
+    fn part2(&mut self) -> U;
 }
 
 pub fn nsew(x: usize, y: usize) -> [(usize, usize); 4] {

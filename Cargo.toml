@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["William John Holden <wjholden@users.noreply.github.com>"]
 
 [dependencies]
+num-complex = "0.4.6"
 
 [lints.rust]
 unsafe_code = "forbid"
