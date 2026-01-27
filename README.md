@@ -18,7 +18,7 @@
 12. `##`
 13. `#*` Procedural programming, imaginary numbers are not necessary for this, read the instructions!
 14. `**` Arrays, bottom-up solutions, searches, vague instructions
-15. `  `
+15. `**` Hardest day of the hardest year? Procedural programming, long specifications, BFS, bisection
 16. `##`
 17. `  `
 18. `##`

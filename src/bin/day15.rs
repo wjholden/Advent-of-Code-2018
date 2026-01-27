@@ -2,6 +2,7 @@ use std::{
     cmp::Reverse,
     collections::{BinaryHeap, HashSet},
     fmt::{Debug, Display},
+    time::Instant,
 };
 
 use ndarray::Array2;
@@ -9,8 +10,10 @@ use ndarray::Array2;
 const PUZZLE: &str = include_str!("../../puzzles/day15.txt");
 
 fn main() {
+    let start = Instant::now();
     println!("Part 1: {:?}", part1());
-    println!("Part 2: {}", part2().unwrap());
+    println!("Part 2: {}", part2(PUZZLE).unwrap());
+    println!("Time: {:?}", start.elapsed());
 }
 
 fn is_adjacent(a: &(usize, usize), b: &(usize, usize)) -> bool {
@@ -386,19 +389,35 @@ fn part1() -> usize {
     }
 }
 
-fn part2() -> Option<usize> {
-    let elf_count = PUZZLE.chars().filter(|&c| c == 'E').count();
-    for i in 4..200 {
-        let mut solver = Puzzle::new(PUZZLE);
-        match solver.battle(i) {
+/// Somehow not the prettiest bisection that I ever wrote, but it works and
+/// it's a bit quicker than simply iterating up from 4.
+fn part2(input: &str) -> Option<usize> {
+    let elf_count = input.chars().filter(|&c| c == 'E').count();
+    let mut low = 0;
+    let mut high = 100;
+
+    loop {
+        if low + 1 == high {
+            low = high;
+        }
+        let m = (low + high) / 2;
+
+        let mut solver = Puzzle::new(input);
+        let outcome = match solver.battle(m) {
             GameResult::ElvesWin(outcome) if solver.elf_count() == elf_count => {
-                return Some(outcome);
+                high = m;
+                outcome
             }
-            GameResult::ElvesWin(_) => continue,
-            GameResult::GoblinsWin(_) => continue,
+            GameResult::ElvesWin(outcome) | GameResult::GoblinsWin(outcome) => {
+                low = m;
+                outcome
+            }
         };
+
+        if low == high {
+            return Some(outcome);
+        }
     }
-    None
 }
 
 #[cfg(test)]
@@ -414,6 +433,11 @@ mod beverage_bandits {
     const BATTLE_27755: &str = include_str!("../../samples/day15-5.txt");
     const BATTLE_28944: &str = include_str!("../../samples/day15-6.txt");
     const BATTLE_18740: &str = include_str!("../../samples/day15-7.txt");
+    const BATTLE_4988: &str = include_str!("../../samples/day15-8.txt");
+    const BATTLE_31284: &str = include_str!("../../samples/day15-9.txt");
+    const BATTLE_3478: &str = include_str!("../../samples/day15-10.txt");
+    const BATTLE_6474: &str = include_str!("../../samples/day15-11.txt");
+    const BATTLE_1140: &str = include_str!("../../samples/day15-12.txt");
 
     #[test]
     fn targetting() {
@@ -590,5 +614,30 @@ mod beverage_bandits {
         let outcome = p.battle(3);
         println!("{p:?}");
         assert_eq!(outcome, GameResult::GoblinsWin(18740))
+    }
+
+    #[test]
+    fn part2_4988() {
+        assert_eq!(part2(BATTLE_4988), Some(4988))
+    }
+
+    #[test]
+    fn part2_31284() {
+        assert_eq!(part2(BATTLE_31284), Some(31284))
+    }
+
+    #[test]
+    fn part2_3478() {
+        assert_eq!(part2(BATTLE_3478), Some(3478))
+    }
+
+    #[test]
+    fn part2_6474() {
+        assert_eq!(part2(BATTLE_6474), Some(6474))
+    }
+
+    #[test]
+    fn part2_1140() {
+        assert_eq!(part2(BATTLE_1140), Some(1140))
     }
 }
