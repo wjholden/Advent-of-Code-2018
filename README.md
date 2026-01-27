@@ -16,8 +16,8 @@
 10. `##`
 11. `##`
 12. `##`
-13. `#*` Procedural programming, imaginary numbers are not necessary for this
-14. `  `
+13. `#*` Procedural programming, imaginary numbers are not necessary for this, read the instructions!
+14. `**` Arrays, bottom-up solutions, searches, vague instructions
 15. `  `
 16. `##`
 17. `  `
@@ -56,3 +56,7 @@ julia> df2
 # Libraries
 
 # References
+
+- [Advent of Code on MCUs](https://www.reddit.com/r/adventofcode/comments/1pwuvdo/upping_the_ante_2025_day_advent_of_code_on_mcus/)
+- [Pico Pico - Embedded Programming with Rust](https://pico.implrust.com)
+- [Raspberry Pi Pico-series Python SDK](https://datasheets.raspberrypi.com/pico/raspberry-pi-pico-python-sdk.pdf)

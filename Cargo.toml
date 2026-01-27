@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["William John Holden <wjholden@users.noreply.github.com>"]
 
 [dependencies]
+ndarray = "0.17.2"
 num-complex = "0.4.6"
 
 [lints.rust]
