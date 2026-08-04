@@ -57,6 +57,25 @@ julia> df2
 
 # References
 
+- [Rust at Scale: An Added Layer of Security for WhatsApp](https://engineering.fb.com/2026/01/27/security/rust-at-scale-security-whatsapp/)
+- [So You Want to Contribute to Rust](https://kivooeo.github.io/blog/first-part-of-contibuting/)
+- [Rust Is Beyond Object-Oriented, Part 3: Inheritance](https://www.thecodedmessage.com/posts/oop-3-inheritance/)
+- [Stop Forwarding Errors, Start Designing Them](https://fast.github.io/blog/stop-forwarding-errors-start-designing-them/)
+- [Maybe Comments SHOULD Explain 'What'](https://www.hillelwayne.com/post/what-comments/)
+- https://rustlings.rust-lang.org/
+
+# Todo
+- [On Modern Hardware the Min-Max Heap beats a Binary Heap](https://probablydance.com/2020/08/31/on-modern-hardware-the-min-max-heap-beats-a-binary-heap/)
+- https://github.com/ConSol-Lab/Pumpkin/issues/336#issuecomment-3665601647
+- https://gosub.io/
+- https://pico.implrust.com/running.html
+- https://ai.palashkantikundu.in/
+
+## Embedded
 - [Advent of Code on MCUs](https://www.reddit.com/r/adventofcode/comments/1pwuvdo/upping_the_ante_2025_day_advent_of_code_on_mcus/)
 - [Pico Pico - Embedded Programming with Rust](https://pico.implrust.com)
 - [Raspberry Pi Pico-series Python SDK](https://datasheets.raspberrypi.com/pico/raspberry-pi-pico-python-sdk.pdf)
+- [Mousefood](https://docs.rs/mousefood/latest/mousefood/)
+
+## AI
+- [Deep Learning from First Principles](https://ai.palashkantikundu.in/)
