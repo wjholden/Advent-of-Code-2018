@@ -1,4 +1,7 @@
-use std::{collections::HashMap, fmt::Display, usize};
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt::Display,
+};
 
 use advent_of_code_2018::Solver;
 
@@ -6,69 +9,63 @@ const PUZZLE: &str = include_str!("../../puzzles/day17.txt");
 
 fn main() {
     let mut solver = Puzzle::new(PUZZLE);
-    // println!("{solver}");
     println!("Part 1: {}", solver.part1());
     //println!("Part 2: {}", solver.part2());
 }
 
+#[derive(Debug)]
 enum Tile {
+    WaterFall,
+    WaterStill,
     Clay,
-    Water,
 }
 
+#[derive(Debug)]
 struct Puzzle {
-    xmin: usize,
-    xmax: usize,
-    ymin: usize,
-    ymax: usize,
-    area: HashMap<(usize, usize), Tile>,
+    tiles: HashMap<(usize, usize), Tile>,
+    frontier: VecDeque<(usize, usize)>,
 }
 
 impl Puzzle {
-    fn drip(&self) -> (usize, usize) {
-        let mut x = 500;
-        let mut y = self.ymin;
-        loop {
-            println!("Search {x},{y}");
-            // Stop if you've reached the bottom.
-            if y == self.ymax {
-                break;
-            }
-            // Nothing below, drop down.
-            else if !self.area.contains_key(&(x, y + 1)) {
-                y += 1;
-            }
-            // Stop if you can't go down and you're still at the top.
-            else if y == self.ymin {
-                break;
-            }
-            // Look left.
-            else if !self.area.contains_key(&(x - 1, y)) {
-                x -= 1;
-            }
-            // Look right.
-            else if !self.area.contains_key(&(x + 1, y)) {
-                x += 1;
-            }
-            // Stop if you can't go
-            else {
-                println!("Something weird happened at {x}, {y}");
-                break;
-            }
+    fn bfs(&mut self) {
+        while let Some((x, y)) = self.frontier.pop_front() {
+            match self.tiles.get(&(x, y)) {
+                Some(Tile::Clay) => {
+                    self.tiles.insert((x, y - 1), Tile::WaterStill);
+                }
+                Some(Tile::WaterFall) => {}
+                Some(Tile::WaterStill) => {}
+                None => {
+                    self.tiles.insert((x, y), Tile::WaterFall);
+                    self.frontier.push_back((x, y + 1));
+                }
+            };
         }
-        (x, y)
     }
 }
 
 impl Display for Puzzle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for y in self.ymin..=self.ymax {
-            for x in self.xmin..=self.xmax {
-                if let Some(Tile::Clay) = self.area.get(&(x, y)) {
-                    write!(f, "#")?;
-                } else {
-                    write!(f, ".")?;
-                }
+        let (xmin, xmax, ymin, ymax) = self.tiles.keys().fold(
+            (usize::MAX, 0, usize::MAX, 0),
+            |(xmin, xmax, ymin, ymax), (x, y)| {
+                (xmin.min(*x), xmax.max(*x), ymin.min(*y), ymax.max(*y))
+            },
+        );
+        dbg!(&[xmin, xmax, ymin, ymax]);
+        for row in ymin..=ymax {
+            for col in xmin..=xmax {
+                write!(
+                    f,
+                    "{}",
+                    match self.tiles.get(&(col, row)) {
+                        //Some(Tile::Sand) => ".",
+                        Some(Tile::Clay) => "#",
+                        Some(Tile::WaterStill) => "~",
+                        Some(Tile::WaterFall) => "|",
+                        None => ".",
+                    }
+                )?;
             }
             writeln!(f)?;
         }
@@ -78,53 +75,39 @@ impl Display for Puzzle {
 
 impl Solver<usize, usize> for Puzzle {
     fn new(input: &str) -> Self {
-        let mut xmin = usize::MAX;
-        let mut xmax = usize::MIN;
-        let mut ymin = usize::MAX;
-        let mut ymax = usize::MIN;
-
-        let mut area = HashMap::new();
-
-        let input = input.replace("=", " ").replace(",", "").replace("..", " ");
+        let input = input.replace("..", " ");
+        let input = input.replace("=", " ");
+        let input = input.replace(",", "");
+        let mut tiles = HashMap::default();
         for line in input.lines() {
-            let s: Vec<_> = line.split_ascii_whitespace().collect();
-            let (a, b, c) = (
-                s[1].parse::<usize>().unwrap(),
-                s[3].parse::<usize>().unwrap(),
-                s[4].parse::<usize>().unwrap(),
-            );
-            for i in b..=c {
-                let (x, y) = if s[0] == "x" { (a, i) } else { (i, a) };
-                xmin = usize::min(x, xmin);
-                xmax = usize::max(x, xmax);
-                ymin = usize::min(y, ymin);
-                ymax = usize::max(y, ymax);
-                area.insert((x, y), Tile::Clay);
+            let line: Vec<_> = line.split_ascii_whitespace().collect();
+            let v = [line[1], line[3], line[4]];
+            let v = v.map(|s| s.parse::<usize>().unwrap());
+            match line[0] {
+                "x" => {
+                    for y in v[1]..=v[2] {
+                        tiles.insert((v[0], y), Tile::Clay);
+                    }
+                }
+                "y" => {
+                    for x in v[1]..=v[2] {
+                        tiles.insert((x, v[0]), Tile::Clay);
+                    }
+                }
+                _ => panic!(),
             }
         }
-
-        dbg!([xmin, xmax, ymin, ymax]);
-
-        Self {
-            xmin,
-            xmax,
-            ymin,
-            ymax,
-            area,
-        }
+        let mut frontier = VecDeque::default();
+        frontier.push_back((500, 0));
+        Self { tiles, frontier }
     }
 
     fn part1(&mut self) -> usize {
-        loop {
-            let (x, y) = self.drip();
-            println!("{x},{y}");
-            if self.area.insert((x, y), Tile::Water).is_some() {
-                break;
-            }
-        }
-        self.area
+        self.bfs();
+        println!("{self}");
+        self.tiles
             .values()
-            .filter(|t| matches!(t, Tile::Water))
+            .filter(|v| matches!(v, Tile::WaterStill | Tile::WaterFall))
             .count()
     }
 
@@ -134,14 +117,13 @@ impl Solver<usize, usize> for Puzzle {
 }
 
 #[cfg(test)]
-mod puzzle_name {
+mod reservoir_research {
     use super::*;
 
     const SAMPLE: &str = include_str!("../../samples/day17.txt");
 
     #[test]
     fn test1() {
-        println!("{}", Puzzle::new(SAMPLE));
         assert_eq!(Puzzle::new(SAMPLE).part1(), 57)
     }
 

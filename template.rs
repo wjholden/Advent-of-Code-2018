@@ -3,7 +3,7 @@ use advent_of_code_2018::Solver;
 const PUZZLE: &str = include_str!("../../puzzles/dayXX.txt");
 
 fn main() {
-    let solver = Puzzle::new(PUZZLE);
+    let mut solver = Puzzle::new(PUZZLE);
     println!("Part 1: {}", solver.part1());
     //println!("Part 2: {}", solver.part2());
 }

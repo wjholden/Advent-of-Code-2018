@@ -18,7 +18,7 @@
 12. `##`
 13. `#*` Procedural programming, imaginary numbers are not necessary for this, read the instructions!
 14. `**` Arrays, bottom-up solutions, searches, vague instructions
-15. `**` Hardest day of the hardest year? Procedural programming, long specifications, BFS, bisection
+15. `**` Hardest day of the hardest year! Procedural programming, long specifications, BFS, bisection
 16. `##`
 17. `  `
 18. `##`
@@ -27,7 +27,7 @@
 21. `# `
 22. `# `
 23. `# `
-24. `  `
+24. `**` Beverage Bandits 2.0? Another simulation with a tricky spec, a challenging input format, bisection search, and a fun idempotence twist.
 25. `  `
 
 # Lessons learned
