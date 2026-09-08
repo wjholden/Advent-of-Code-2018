@@ -8,3 +8,4 @@ Cargo.lock
 puzzles/
 
 *.csv
+*.dzn
