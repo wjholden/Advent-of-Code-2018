@@ -15,11 +15,11 @@ impl Solver<usize, usize> for Puzzle {
         Self {}
     }
 
-    fn part1(&self) -> usize {
+    fn part1(&mut self) -> usize {
         todo!()
     }
 
-    fn part2(&self) -> usize {
+    fn part2(&mut self) -> usize {
         todo!()
     }
 }

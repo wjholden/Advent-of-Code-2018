@@ -23,10 +23,10 @@
 17. `  `
 18. `##`
 19. `##`
-20. `  `
+20. `* ` Regular expressions, pathfinding
 21. `# `
 22. `# `
-23. `# `
+23. `#*`
 24. `**` Beverage Bandits 2.0? Another simulation with a tricky spec, a challenging input format, bisection search, and a fun idempotence twist.
 25. `  `
 
