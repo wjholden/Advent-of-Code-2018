@@ -27,17 +27,6 @@ var min_x..max_x: x;
 var min_y..max_y: y;
 var min_z..max_z: z;
 
-% var 0..n: in_range;
-
-% constraint in_range = sum(j in 1..n)(bool2int(
-%   abs(x - nanobots[j,1]) +
-%   abs(y - nanobots[j,2]) +
-%   abs(z - nanobots[j,3]) <= ranges[j]
-% ));
-
-% solve maximize in_range;
-
-
 % Binary indicators: 1 if nanobot j is in range, 0 otherwise
 array[1..n] of var 0..1: in_range;
 

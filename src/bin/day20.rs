@@ -1,5 +1,6 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    cmp::Reverse,
+    collections::{BTreeMap, BinaryHeap, HashMap, VecDeque},
     fmt::Display,
 };
 
@@ -15,7 +16,8 @@ fn main() {
 
 struct Puzzle {
     regex: String,
-    map: HashMap<(isize, isize), (Tile, usize)>,
+    map: HashMap<(isize, isize), Tile>,
+    distances: BTreeMap<(isize, isize), usize>,
 }
 
 #[derive(Debug)]
@@ -34,16 +36,16 @@ impl Display for Puzzle {
         let max_row = self.map.keys().map(|k| k.1).max().unwrap();
         let min_col = self.map.keys().map(|k| k.0).min().unwrap();
         let max_col = self.map.keys().map(|k| k.0).max().unwrap();
-        for r in min_row - 1..=max_row + 1 {
-            for c in min_col - 1..=max_col + 1 {
+        for y in min_row - 1..=max_row + 1 {
+            for x in min_col - 1..=max_col + 1 {
                 write!(
                     f,
                     "{}",
-                    match self.map.get(&(c, r)) {
-                        Some((Tile::Start, _)) => "X",
-                        Some((Tile::Room, _)) => ".",
-                        Some((Tile::HDoor, _)) => "-",
-                        Some((Tile::VDoor, _)) => "|",
+                    match self.map.get(&(x, y)) {
+                        Some(Tile::Start) => "X",
+                        Some(Tile::Room) => ".",
+                        Some(Tile::HDoor) => "-",
+                        Some(Tile::VDoor) => "|",
                         None => "#",
                     },
                 )?;
@@ -57,63 +59,36 @@ impl Display for Puzzle {
 impl Solver<usize, usize> for Puzzle {
     fn new(input: &str) -> Self {
         let mut map = HashMap::default();
-        map.insert((0, 0), (Tile::Start, 0));
+        map.insert((0, 0), Tile::Start);
 
         let mut i = 0;
         let mut pos = VecDeque::from([(0, 0)]);
-        let mut doors = VecDeque::from([0]);
         loop {
             match input.chars().nth(i).unwrap() {
                 '^' => {}
-                'N' => {
-                    pos[0].1 -= 1;
-                    map.insert(pos[0].clone(), (Tile::HDoor, doors[0]));
-                    doors[0] += 1;
-                    pos[0].1 -= 1;
-                    // map.insert(pos[0].clone(), (Tile::Room, doors[0]));
-                    map.entry(pos[0].clone()).or_insert((Tile::Room, doors[0]));
-                    doors[0] = doors[0].min(map.get(&pos[0]).unwrap().1);
-                }
-                'S' => {
-                    pos[0].1 += 1;
-                    map.insert(pos[0].clone(), (Tile::HDoor, doors[0]));
-                    doors[0] += 1;
-                    pos[0].1 += 1;
-                    // map.insert(pos[0].clone(), (Tile::Room, doors[0]));
-                    map.entry(pos[0].clone()).or_insert((Tile::Room, doors[0]));
-                    doors[0] = doors[0].min(map.get(&pos[0]).unwrap().1);
-                }
-                'W' => {
-                    pos[0].0 -= 1;
-                    map.insert(pos[0].clone(), (Tile::VDoor, doors[0]));
-                    doors[0] += 1;
-                    pos[0].0 -= 1;
-                    // map.insert(pos[0].clone(), (Tile::Room, doors[0]));
-                    map.entry(pos[0].clone()).or_insert((Tile::Room, doors[0]));
-                    doors[0] = doors[0].min(map.get(&pos[0]).unwrap().1);
-                }
-                'E' => {
-                    pos[0].0 += 1;
-                    map.insert(pos[0].clone(), (Tile::VDoor, doors[0]));
-                    doors[0] += 1;
-                    pos[0].0 += 1;
-                    // map.insert(pos[0].clone(), (Tile::Room, doors[0]));
-                    map.entry(pos[0].clone()).or_insert((Tile::Room, doors[0]));
-                    doors[0] = doors[0].min(map.get(&pos[0]).unwrap().1);
+                direction @ ('N' | 'S' | 'E' | 'W') => {
+                    let (dx, dy, door_type) = match direction {
+                        'N' => (0, -1, Tile::HDoor),
+                        'S' => (0, 1, Tile::HDoor),
+                        'W' => (-1, 0, Tile::VDoor),
+                        'E' => (1, 0, Tile::VDoor),
+                        _ => panic!(),
+                    };
+                    pos[0].0 += dx;
+                    pos[0].1 += dy;
+                    map.insert(pos[0].clone(), door_type);
+                    pos[0].0 += dx;
+                    pos[0].1 += dy;
+                    map.entry(pos[0].clone()).or_insert(Tile::Room);
                 }
                 '(' => {
                     pos.push_front(pos[0].clone());
-                    doors.push_front(doors[0]);
                 }
                 ')' => {
                     pos.pop_front();
-                    doors.pop_front();
                 }
                 '|' => {
-                    pos.pop_front();
-                    pos.push_front(pos[0].clone());
-                    doors.pop_front();
-                    doors.push_front(doors[0]);
+                    pos[0] = pos[1];
                 }
                 '$' => {
                     break;
@@ -123,22 +98,45 @@ impl Solver<usize, usize> for Puzzle {
             i += 1;
         }
 
+        let mut distances: BTreeMap<(isize, isize), usize> = BTreeMap::new();
+        let mut frontier = BinaryHeap::new();
+        frontier.push(Reverse((0, (0, 0))));
+        while let Some(Reverse((d, (x, y)))) = frontier.pop() {
+            if !distances.contains_key(&(x, y)) {
+                distances.insert((x, y), d);
+            }
+            for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
+                // Is there a door adjacent to the current position?
+                if matches!(map.get(&(x + dx, y + dy)), Some(Tile::VDoor | Tile::HDoor)) {
+                    // The candidate room is beyond that door.
+                    let (cx, cy) = (x + 2 * dx, y + 2 * dy);
+                    // Have we already discovered this position?
+                    if !distances.contains_key(&(cx, cy)) {
+                        // If not, then let's add this room to the frontier.
+                        frontier.push(Reverse((d + 1, (cx, cy))));
+                    }
+                }
+            }
+        }
+
         Self {
             regex: input.to_owned(),
             map,
+            distances,
         }
     }
 
     fn part1(&mut self) -> usize {
-        println!("{self}");
-        self.map.values().map(|v| v.1).max().unwrap()
+        // println!("{self}");
+        *self.distances.values().max().unwrap()
     }
 
     fn part2(&mut self) -> usize {
         // Doesn't work.
-        self.map
-            .values()
-            .fold(0, |acc, v| if v.1 >= 1000 { acc + 1 } else { acc })
+        // self.map
+        //     .values()
+        //     .fold(0, |acc, v| if v.1 >= 1000 { acc + 1 } else { acc })
+        self.distances.values().filter(|&&v| v >= 1000).count()
     }
 }
 
