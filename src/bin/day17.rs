@@ -6,8 +6,10 @@ const PUZZLE: &str = include_str!("../../puzzles/day17.txt");
 
 fn main() {
     let mut solver = Puzzle::new(PUZZLE);
+    solver.drop_iter(500, 0);
+    println!("{solver}");
     println!("Part 1: {}", solver.part1());
-    //println!("Part 2: {}", solver.part2());
+    println!("Part 2: {}", solver.part2());
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -26,144 +28,166 @@ enum Direction {
 #[derive(Debug)]
 struct Puzzle {
     tiles: HashMap<(usize, usize), Tile>,
+    min_y: usize,
     max_y: usize,
-    start: Vec<(usize, usize)>,
-    parent: HashMap<(usize, usize), (usize, usize)>,
 }
 
 impl Puzzle {
-    /// This function is a depth-first search.
-    fn drip(&mut self) {
-        let (x, mut y) = self.start[0];
-        // Fall until you find clay or still water.
-        loop {
-            y += 1;
-            if y > self.max_y {
-                self.start.remove(0);
-                return;
+    /// Took a little help from Google's AI to transform my recursive version
+    /// into the iterative version you see here. Runs surprisingly fast!
+    fn drop_iter(&mut self, x: usize, y: usize) {
+        let mut stack = vec![(x, y)];
+
+        while let Some((x, y)) = stack.pop() {
+            // println!("{self}");
+            // Base case
+            if y >= self.max_y {
+                // return;
+                continue;
             }
-            self.tiles.insert((x, y), Tile::WaterFall);
+
+            // Recursive case
+            // Fill down as far as we can.
             match self.tiles.get(&(x, y + 1)) {
-                Some(Tile::Clay | Tile::WaterStill) => {
-                    break;
-                }
-                Some(Tile::WaterFall) | None => {
+                None => {
+                    self.tiles.insert((x, y + 1), Tile::WaterFall);
+                    // self.drop(x, y + 1);
+                    stack.push((x, y)); // we need to come back later
+                    stack.push((x, y + 1));
                     continue;
                 }
+                Some(Tile::WaterFall) => {
+                    // return;
+                    continue;
+                }
+                _ => {}
             }
-        }
-        if self.is_walled(x, y) {
-            self.fill_row(x, y, Tile::WaterStill);
-        } else {
-            self.fill_row(x, y, Tile::WaterFall);
-            self.start.remove(0);
+
+            // Ok, we filled so far down that we're either on still water or clay.
+            // See if we can fill to the left or right.
+            let left_fillable = self.fillable_v2(x, y, Direction::Left);
+            let right_fillable = self.fillable_v2(x, y, Direction::Right);
+            // If both are fillable then we need to flood this row.
+            match (left_fillable, right_fillable) {
+                (true, true) => {
+                    self.flood(x, y, Direction::Left, Tile::WaterStill);
+                    self.flood(x, y, Direction::Right, Tile::WaterStill);
+                }
+                (true, false) => {
+                    self.flood(x, y, Direction::Left, Tile::WaterFall);
+                    let rx = self.flood(x, y, Direction::Right, Tile::WaterFall);
+                    // self.drop(rx, y);
+                    stack.push((rx, y));
+                }
+                (false, true) => {
+                    self.flood(x, y, Direction::Right, Tile::WaterFall);
+                    let lx = self.flood(x, y, Direction::Left, Tile::WaterFall);
+                    // self.drop(lx, y);
+                    stack.push((lx, y));
+                }
+                (false, false) => {
+                    let rx = self.flood(x, y, Direction::Right, Tile::WaterFall);
+                    // self.drop(rx, y);
+                    stack.push((rx, y));
+                    let lx = self.flood(x, y, Direction::Left, Tile::WaterFall);
+                    // self.drop(lx, y);
+                    stack.push((lx, y));
+                }
+            }
         }
     }
 
-    fn is_fillable(&self, x: usize, y: usize, direction: Direction) -> bool {
-        for dx in 1.. {
-            let new_x = match direction {
-                Direction::Left => x - dx,
-                Direction::Right => x + dx,
+    #[deprecated]
+    #[allow(dead_code)]
+    fn drop(&mut self, x: usize, y: usize) {
+        // Base case
+        if y >= self.max_y {
+            return;
+        }
+
+        // Recursive case
+        // Fill down as far as we can.
+        match self.tiles.get(&(x, y + 1)) {
+            None => {
+                self.tiles.insert((x, y + 1), Tile::WaterFall);
+                self.drop(x, y + 1);
+            }
+            Some(Tile::WaterFall) => {
+                return;
+            }
+            _ => {}
+        }
+
+        // Ok, we filled so far down that we're either on still water or clay.
+        // See if we can fill to the left or right.
+        let left_fillable = self.fillable_v2(x, y, Direction::Left);
+        let right_fillable = self.fillable_v2(x, y, Direction::Right);
+        dbg!([left_fillable, right_fillable]);
+        // If both are fillable then we need to flood this row.
+        match (left_fillable, right_fillable) {
+            (true, true) => {
+                self.flood(x, y, Direction::Left, Tile::WaterStill);
+                self.flood(x, y, Direction::Right, Tile::WaterStill);
+            }
+            (true, false) => {
+                self.flood(x, y, Direction::Left, Tile::WaterFall);
+                let rx = self.flood(x, y, Direction::Right, Tile::WaterFall);
+                self.drop(rx, y);
+            }
+            (false, true) => {
+                self.flood(x, y, Direction::Right, Tile::WaterFall);
+                let lx = self.flood(x, y, Direction::Left, Tile::WaterFall);
+                self.drop(lx, y);
+            }
+            (false, false) => {
+                let rx = self.flood(x, y, Direction::Right, Tile::WaterFall);
+                self.drop(rx, y);
+                let lx = self.flood(x, y, Direction::Left, Tile::WaterFall);
+                self.drop(lx, y);
+            }
+        }
+    }
+
+    fn flood(&mut self, x: usize, y: usize, direction: Direction, tile: Tile) -> usize {
+        let mut new_x = x;
+        while !matches!(self.tiles.get(&(new_x, y)), Some(Tile::Clay)) {
+            self.tiles.insert((new_x, y), tile);
+            if matches!(
+                self.tiles.get(&(new_x, y + 1)),
+                None | Some(Tile::WaterFall)
+            ) {
+                return new_x;
+            }
+            new_x = match direction {
+                Direction::Left => new_x - 1,
+                Direction::Right => new_x + 1,
             };
+        }
+        new_x
+    }
+
+    fn fillable_v2(&self, x: usize, y: usize, direction: Direction) -> bool {
+        // println!("let's see if ({x},{y}) is fillable from the {direction:?}");
+        let mut new_x = x;
+        loop {
+            // dbg!([new_x, y]);
             if matches!(
                 self.tiles.get(&(new_x, y + 1)),
                 Some(Tile::WaterFall) | None
             ) {
                 return false;
             }
+            new_x = match direction {
+                Direction::Left => new_x - 1,
+                Direction::Right => new_x + 1,
+            };
             if matches!(
                 self.tiles.get(&(new_x, y)),
-                Some(Tile::Clay | Tile::WaterStill)
+                Some(Tile::Clay) | Some(Tile::WaterStill)
             ) {
                 return true;
             }
         }
-        panic!()
-    }
-
-    /// This function searches left and right to see if a position (x,y) can
-    /// fill up with water.
-    fn is_walled(&self, x: usize, y: usize) -> bool {
-        self.is_fillable(x, y, Direction::Left) && self.is_fillable(x, y, Direction::Right)
-        // let (mut left_is_walled, mut right_is_walled) = (None, None);
-        // // First look left.
-        // for dx in 1.. {
-        //     if matches!(
-        //         self.tiles.get(&(x - dx, y + 1)),
-        //         Some(Tile::WaterFall) | None
-        //     ) {
-        //         left_is_walled = Some(false);
-        //         break;
-        //     }
-        //     if matches!(
-        //         self.tiles.get(&(x - dx, y)),
-        //         Some(Tile::Clay | Tile::WaterFall)
-        //     ) {
-        //         left_is_walled = Some(true);
-        //         break;
-        //     }
-        // }
-        // // Now right.
-        // for dx in 1.. {
-        //     if self.tiles.get(&(x + dx, y + 1)).is_none() {
-        //         right_is_walled = Some(false);
-        //         break;
-        //     }
-        //     if matches!(self.tiles.get(&(x + dx, y)), Some(Tile::Clay)) {
-        //         right_is_walled = Some(true);
-        //         break;
-        //     }
-        // }
-        // left_is_walled.unwrap() && right_is_walled.unwrap()
-    }
-
-    fn fill(&mut self, x: usize, y: usize, direction: Direction, tile: Tile) {
-        for dx in 1.. {
-            let new_x = match direction {
-                Direction::Left => x - dx,
-                Direction::Right => x + dx,
-            };
-            match self.tiles.get(&(new_x, y)) {
-                Some(Tile::Clay) => {
-                    break;
-                }
-                Some(Tile::WaterStill) => {
-                    println!("{self}");
-                    println!("{:?}", self.start);
-                    println!(
-                        "We are trying to fill a row that is already filled at (x={new_x},y={y})"
-                    );
-                    let current_start = self.start.remove(0);
-                    // dbg!(&self.parent);
-                    self.start.push(self.parent[&current_start]);
-                    break;
-                }
-                Some(Tile::WaterFall) | None => {
-                    self.tiles.insert((new_x, y), tile);
-                }
-            }
-            // Stop filling if we are over something that is either empty or falling.
-            if matches!(
-                self.tiles.get(&(new_x, y + 1)),
-                Some(Tile::WaterFall) | None
-            ) {
-                // if self.tiles.get(&(new_x, y + 1)).is_none() {
-                assert!(matches!(tile, Tile::WaterFall));
-                self.parent.insert((new_x, y), self.start[0]);
-                if !self.start.contains(&(new_x, y)) {
-                    self.start.push((new_x, y));
-                }
-                break;
-            }
-        }
-    }
-
-    fn fill_row(&mut self, x: usize, y: usize, tile: Tile) {
-        self.fill(x, y, Direction::Left, tile);
-        self.fill(x, y, Direction::Right, tile);
-        // Finally the center.
-        self.tiles.insert((x, y), tile);
     }
 }
 
@@ -176,16 +200,14 @@ impl Display for Puzzle {
             },
         );
         for row in ymin..=ymax {
-            for col in xmin..=xmax {
+            for col in xmin - 1..=xmax + 1 {
                 write!(
                     f,
                     "{}",
                     match self.tiles.get(&(col, row)) {
-                        //Some(Tile::Sand) => ".",
                         Some(Tile::Clay) => "#",
                         Some(Tile::WaterStill) => "~",
                         Some(Tile::WaterFall) => "|",
-                        // Some(Tile::Water) => "~",
                         None => ".",
                     }
                 )?;
@@ -220,30 +242,34 @@ impl Solver<usize, usize> for Puzzle {
                 _ => panic!(),
             }
         }
-        let max_y = tiles.keys().fold(0, |acc, &(_, y)| acc.max(y));
+        let (min_y, max_y) = tiles
+            .keys()
+            .fold((usize::MAX, 0), |acc, &(_, y)| (acc.0.min(y), acc.1.max(y)));
         Self {
             tiles,
+            min_y,
             max_y,
-            start: vec![(500, 0)],
-            parent: HashMap::default(),
         }
     }
 
     fn part1(&mut self) -> usize {
-        while !self.start.is_empty() {
-            self.drip();
-        }
-        println!("{self}");
-        self.tiles.values().fold(0, |acc, t| {
-            acc + match t {
-                Tile::WaterFall | Tile::WaterStill => 1,
-                Tile::Clay => 0,
+        self.tiles.iter().fold(0, |acc, ((_, y), t)| {
+            if *y >= self.min_y && matches!(t, Tile::WaterFall | Tile::WaterStill) {
+                acc + 1
+            } else {
+                acc
             }
         })
     }
 
     fn part2(&mut self) -> usize {
-        todo!()
+        self.tiles.iter().fold(0, |acc, ((_, y), t)| {
+            if *y >= self.min_y && matches!(t, Tile::WaterStill) {
+                acc + 1
+            } else {
+                acc
+            }
+        })
     }
 }
 
@@ -254,25 +280,16 @@ mod reservoir_research {
     const SAMPLE: &str = include_str!("../../samples/day17.txt");
 
     #[test]
-    fn wall_detection() {
-        let mut p = Puzzle::new(SAMPLE);
-        let x = 500;
-        for y in (3..=6).rev() {
-            assert!(p.is_walled(x, y) == true);
-            p.fill_row(x, y, Tile::WaterStill);
-            println!("{p}");
-        }
-        assert_eq!(p.is_walled(x, 2), false);
-        p.fill_row(x, 2, Tile::WaterFall);
-        println!("{p}");
-        assert!(p.start.contains(&(502, 2)));
-    }
-
-    #[test]
     fn test1() {
-        assert_eq!(Puzzle::new(SAMPLE).part1(), 57)
+        let mut p = Puzzle::new(SAMPLE);
+        p.drop_iter(500, 0);
+        assert_eq!(p.part1(), 57)
     }
 
     #[test]
-    fn test2() {}
+    fn test2() {
+        let mut p = Puzzle::new(SAMPLE);
+        p.drop_iter(500, 0);
+        assert_eq!(p.part2(), 29)
+    }
 }
