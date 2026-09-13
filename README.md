@@ -20,11 +20,11 @@
 14. `**` Arrays, bottom-up solutions, searches, vague instructions
 15. `**` Hardest day of the hardest year! Procedural programming, long specifications, BFS, bisection
 16. `##`
-17. `  `
+17. `  ` Physics engines, special cases
 18. `##`
 19. `##`
 20. `**` Regular expressions, backtracking/stack machines, BFS, shortest-path trees
-  21. `#*` Assembly languages, reverse engineering, cycles
+21. `#*` Assembly languages, reverse engineering, cycles, [hash functions](https://www.reddit.com/r/adventofcode/comments/17253uk/comment/k3y4zse/)
 22. `# `
 23. `#*` Geometry, satisfiability
 24. `**` Beverage Bandits 2.0? Another simulation with a tricky spec, a challenging input format, bisection search, and a fun idempotence twist.

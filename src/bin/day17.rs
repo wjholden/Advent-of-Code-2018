@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    fmt::Display,
-};
+use std::{collections::HashMap, fmt::Display};
 
 use advent_of_code_2018::Solver;
 
@@ -13,7 +10,7 @@ fn main() {
     //println!("Part 2: {}", solver.part2());
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Tile {
     WaterFall,
     WaterStill,
@@ -21,26 +18,152 @@ enum Tile {
 }
 
 #[derive(Debug)]
+enum Direction {
+    Left,
+    Right,
+}
+
+#[derive(Debug)]
 struct Puzzle {
     tiles: HashMap<(usize, usize), Tile>,
-    frontier: VecDeque<(usize, usize)>,
+    max_y: usize,
+    start: Vec<(usize, usize)>,
+    parent: HashMap<(usize, usize), (usize, usize)>,
 }
 
 impl Puzzle {
-    fn bfs(&mut self) {
-        while let Some((x, y)) = self.frontier.pop_front() {
-            match self.tiles.get(&(x, y)) {
-                Some(Tile::Clay) => {
-                    self.tiles.insert((x, y - 1), Tile::WaterStill);
+    /// This function is a depth-first search.
+    fn drip(&mut self) {
+        let (x, mut y) = self.start[0];
+        // Fall until you find clay or still water.
+        loop {
+            y += 1;
+            if y > self.max_y {
+                self.start.remove(0);
+                return;
+            }
+            self.tiles.insert((x, y), Tile::WaterFall);
+            match self.tiles.get(&(x, y + 1)) {
+                Some(Tile::Clay | Tile::WaterStill) => {
+                    break;
                 }
-                Some(Tile::WaterFall) => {}
-                Some(Tile::WaterStill) => {}
-                None => {
-                    self.tiles.insert((x, y), Tile::WaterFall);
-                    self.frontier.push_back((x, y + 1));
+                Some(Tile::WaterFall) | None => {
+                    continue;
                 }
-            };
+            }
         }
+        if self.is_walled(x, y) {
+            self.fill_row(x, y, Tile::WaterStill);
+        } else {
+            self.fill_row(x, y, Tile::WaterFall);
+            self.start.remove(0);
+        }
+    }
+
+    fn is_fillable(&self, x: usize, y: usize, direction: Direction) -> bool {
+        for dx in 1.. {
+            let new_x = match direction {
+                Direction::Left => x - dx,
+                Direction::Right => x + dx,
+            };
+            if matches!(
+                self.tiles.get(&(new_x, y + 1)),
+                Some(Tile::WaterFall) | None
+            ) {
+                return false;
+            }
+            if matches!(
+                self.tiles.get(&(new_x, y)),
+                Some(Tile::Clay | Tile::WaterStill)
+            ) {
+                return true;
+            }
+        }
+        panic!()
+    }
+
+    /// This function searches left and right to see if a position (x,y) can
+    /// fill up with water.
+    fn is_walled(&self, x: usize, y: usize) -> bool {
+        self.is_fillable(x, y, Direction::Left) && self.is_fillable(x, y, Direction::Right)
+        // let (mut left_is_walled, mut right_is_walled) = (None, None);
+        // // First look left.
+        // for dx in 1.. {
+        //     if matches!(
+        //         self.tiles.get(&(x - dx, y + 1)),
+        //         Some(Tile::WaterFall) | None
+        //     ) {
+        //         left_is_walled = Some(false);
+        //         break;
+        //     }
+        //     if matches!(
+        //         self.tiles.get(&(x - dx, y)),
+        //         Some(Tile::Clay | Tile::WaterFall)
+        //     ) {
+        //         left_is_walled = Some(true);
+        //         break;
+        //     }
+        // }
+        // // Now right.
+        // for dx in 1.. {
+        //     if self.tiles.get(&(x + dx, y + 1)).is_none() {
+        //         right_is_walled = Some(false);
+        //         break;
+        //     }
+        //     if matches!(self.tiles.get(&(x + dx, y)), Some(Tile::Clay)) {
+        //         right_is_walled = Some(true);
+        //         break;
+        //     }
+        // }
+        // left_is_walled.unwrap() && right_is_walled.unwrap()
+    }
+
+    fn fill(&mut self, x: usize, y: usize, direction: Direction, tile: Tile) {
+        for dx in 1.. {
+            let new_x = match direction {
+                Direction::Left => x - dx,
+                Direction::Right => x + dx,
+            };
+            match self.tiles.get(&(new_x, y)) {
+                Some(Tile::Clay) => {
+                    break;
+                }
+                Some(Tile::WaterStill) => {
+                    println!("{self}");
+                    println!("{:?}", self.start);
+                    println!(
+                        "We are trying to fill a row that is already filled at (x={new_x},y={y})"
+                    );
+                    let current_start = self.start.remove(0);
+                    // dbg!(&self.parent);
+                    self.start.push(self.parent[&current_start]);
+                    break;
+                }
+                Some(Tile::WaterFall) | None => {
+                    self.tiles.insert((new_x, y), tile);
+                }
+            }
+            // Stop filling if we are over something that is either empty or falling.
+            if matches!(
+                self.tiles.get(&(new_x, y + 1)),
+                Some(Tile::WaterFall) | None
+            ) {
+                // if self.tiles.get(&(new_x, y + 1)).is_none() {
+                assert!(matches!(tile, Tile::WaterFall));
+                self.parent.insert((new_x, y), self.start[0]);
+                if !self.start.contains(&(new_x, y)) {
+                    self.start.push((new_x, y));
+                }
+                break;
+            }
+        }
+    }
+
+    fn fill_row(&mut self, x: usize, y: usize, tile: Tile) {
+        self.fill(x, y, Direction::Left, tile);
+        self.fill(x, y, Direction::Right, tile);
+        // Finally the center.
+        self.tiles.insert((x, y), tile);
     }
 }
 
@@ -52,7 +175,6 @@ impl Display for Puzzle {
                 (xmin.min(*x), xmax.max(*x), ymin.min(*y), ymax.max(*y))
             },
         );
-        dbg!(&[xmin, xmax, ymin, ymax]);
         for row in ymin..=ymax {
             for col in xmin..=xmax {
                 write!(
@@ -63,6 +185,7 @@ impl Display for Puzzle {
                         Some(Tile::Clay) => "#",
                         Some(Tile::WaterStill) => "~",
                         Some(Tile::WaterFall) => "|",
+                        // Some(Tile::Water) => "~",
                         None => ".",
                     }
                 )?;
@@ -97,18 +220,26 @@ impl Solver<usize, usize> for Puzzle {
                 _ => panic!(),
             }
         }
-        let mut frontier = VecDeque::default();
-        frontier.push_back((500, 0));
-        Self { tiles, frontier }
+        let max_y = tiles.keys().fold(0, |acc, &(_, y)| acc.max(y));
+        Self {
+            tiles,
+            max_y,
+            start: vec![(500, 0)],
+            parent: HashMap::default(),
+        }
     }
 
     fn part1(&mut self) -> usize {
-        self.bfs();
+        while !self.start.is_empty() {
+            self.drip();
+        }
         println!("{self}");
-        self.tiles
-            .values()
-            .filter(|v| matches!(v, Tile::WaterStill | Tile::WaterFall))
-            .count()
+        self.tiles.values().fold(0, |acc, t| {
+            acc + match t {
+                Tile::WaterFall | Tile::WaterStill => 1,
+                Tile::Clay => 0,
+            }
+        })
     }
 
     fn part2(&mut self) -> usize {
@@ -121,6 +252,21 @@ mod reservoir_research {
     use super::*;
 
     const SAMPLE: &str = include_str!("../../samples/day17.txt");
+
+    #[test]
+    fn wall_detection() {
+        let mut p = Puzzle::new(SAMPLE);
+        let x = 500;
+        for y in (3..=6).rev() {
+            assert!(p.is_walled(x, y) == true);
+            p.fill_row(x, y, Tile::WaterStill);
+            println!("{p}");
+        }
+        assert_eq!(p.is_walled(x, 2), false);
+        p.fill_row(x, 2, Tile::WaterFall);
+        println!("{p}");
+        assert!(p.start.contains(&(502, 2)));
+    }
 
     #[test]
     fn test1() {
