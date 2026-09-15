@@ -20,7 +20,7 @@
 14. `**` Arrays, bottom-up solutions, searches, vague instructions
 15. `**` Hardest day of the hardest year! Procedural programming, long specifications, BFS, bisection
 16. `##`
-17. `  ` Physics engines, special cases
+17. `**` Physics engines, special cases, recursion vs. iteration
 18. `##`
 19. `##`
 20. `**` Regular expressions, backtracking/stack machines, BFS, shortest-path trees
